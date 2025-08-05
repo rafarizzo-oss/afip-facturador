@@ -13,15 +13,19 @@ app.post('/emitir-factura', async (req, res) => {
   try {
     const { puntoVenta, tipoCbte, docTipo, docNro, importe } = req.body;
 
+    // Obtener el último comprobante autorizado
+    const ultimo = await afip.ElectronicBilling.getLastVoucher(puntoVenta, tipoCbte);
+    const siguiente = ultimo + 1;
+
     const data = {
       CantReg: 1,
       PtoVta: puntoVenta,
       CbteTipo: tipoCbte,
-      Concepto: 1, // Productos
+      Concepto: 1,
       DocTipo: docTipo,
       DocNro: docNro,
-      CbteDesde: 1,
-      CbteHasta: 1,
+      CbteDesde: siguiente,
+      CbteHasta: siguiente,
       CbteFch: new Date().toISOString().slice(0, 10).replace(/-/g, ''),
       ImpTotal: importe,
       ImpNeto: importe,
@@ -30,7 +34,7 @@ app.post('/emitir-factura', async (req, res) => {
       MonCotiz: 1,
       Iva: [
         {
-          Id: 5, // 21%
+          Id: 5,
           BaseImp: importe,
           Importe: +(importe * 0.21).toFixed(2),
         },
@@ -42,11 +46,14 @@ app.post('/emitir-factura', async (req, res) => {
       resultado: response.FeDetResp?.FECAEDetResponse?.[0]?.Resultado,
       cae: response.FeDetResp?.FECAEDetResponse?.[0]?.CAE,
       vencimiento: response.FeDetResp?.FECAEDetResponse?.[0]?.CAEFchVto,
+      nroComprobante: siguiente
     });
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: error.message });
   }
 });
+
 
 const PORT = 3000;
 app.listen(PORT, () => {
