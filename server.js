@@ -7,13 +7,13 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const afip = new Afip({ CUIT: 20409378472 }); // Modo dev sin certificado
+const afip = new Afip({ CUIT: 20409378472 }); // CUIT de prueba para entorno dev
 
 app.post('/emitir-factura', async (req, res) => {
   try {
     const { puntoVenta, tipoCbte, docTipo, docNro, importe } = req.body;
 
-    // Obtener el último comprobante autorizado
+    // Obtener último comprobante autorizado
     const ultimo = await afip.ElectronicBilling.getLastVoucher(puntoVenta, tipoCbte);
     const siguiente = ultimo + 1;
 
@@ -32,6 +32,8 @@ app.post('/emitir-factura', async (req, res) => {
       ImpIVA: +(importe * 0.21).toFixed(2),
       MonId: 'PES',
       MonCotiz: 1,
+      CbteModalidad: 1,
+      TipoResp: 1,
       Iva: [
         {
           Id: 5,
@@ -42,6 +44,7 @@ app.post('/emitir-factura', async (req, res) => {
     };
 
     const response = await afip.ElectronicBilling.createVoucher(data);
+
     res.json({
       resultado: response.FeDetResp?.FECAEDetResponse?.[0]?.Resultado,
       cae: response.FeDetResp?.FECAEDetResponse?.[0]?.CAE,
@@ -54,8 +57,7 @@ app.post('/emitir-factura', async (req, res) => {
   }
 });
 
-
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servidor escuchando en http://localhost:${PORT}`);
 });
